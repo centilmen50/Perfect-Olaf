@@ -1,0 +1,389 @@
+﻿using System;
+using System.Linq;
+using EloBuddy;
+using EloBuddy.SDK;
+using EloBuddy.SDK.Enumerations;
+using EloBuddy.SDK.Events;
+using EloBuddy.SDK.Menu;
+using EloBuddy.SDK.Menu.Values;
+using EloBuddy.SDK.Rendering;
+using Color = System.Drawing.Color;
+using SharpDX;
+
+
+namespace Perfect_Olaf
+{
+    internal class OlafAxe
+    {
+        public GameObject Object { get; set; }
+        public float NetworkId { get; set; }
+        public Vector3 AxePos { get; set; }
+        public double ExpireTime { get; set; }
+    }
+
+    class Program
+    {
+        public static Spell.Skillshot Q;
+        public static Spell.Active W;
+        public static Spell.Targeted E;
+        public static Spell.Active R;
+        public static Menu Menu, SkillMenu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu;
+        private static readonly OlafAxe olafAxe = new OlafAxe();
+        static Item Healthpot;
+        static Item Manapot;
+        static Item CrystalFlask;
+
+        static void Main(string[] args)
+        {
+            Loading.OnLoadingComplete += Loading_OnLoadingComplete;
+        }
+
+        public static AIHeroClient _Player
+        {
+            get { return ObjectManager.Player; }
+        }
+
+        private static void Loading_OnLoadingComplete(EventArgs args)
+        {
+            if (Player.Instance.ChampionName != "Olaf")
+                return;
+
+            Bootstrap.Init(null);
+
+            Healthpot = new Item(2003, 0);
+            Manapot = new Item(2004, 0);
+            CrystalFlask = new Item(2041, 0);
+            uint level = (uint)Player.Instance.Level;
+            Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1600, 100)
+            {
+                AllowedCollisionCount = int.MaxValue, MinimumHitChance = HitChance.High
+            };
+            W = new Spell.Active(SpellSlot.W);
+            E = new Spell.Targeted(SpellSlot.E, 320);
+            R = new Spell.Active(SpellSlot.R);
+
+            Menu = MainMenu.AddMenu("Perfect Olaf", "perfectolaf");
+            Menu.AddLabel("Perrrrrrrrrfect Ass");
+            Menu.AddSeparator();
+
+            
+            ComboMenu = Menu.AddSubMenu("Combo Settings","ComboSettings");            
+            ComboMenu.AddLabel("Combo Settings");
+            ComboMenu.Add("QCombo", new CheckBox("Use Q"));
+            ComboMenu.Add("WCombo", new CheckBox("Use W"));
+            ComboMenu.Add("ECombo", new CheckBox("Use E"));
+            ComboMenu.Add("RCombo", new CheckBox("Use R"));
+
+            HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
+            HarassMenu.AddLabel("Harass Settings");
+            HarassMenu.Add("QHarass", new CheckBox("Use Q"));
+            HarassMenu.Add("WHarass", new CheckBox("Use W"));
+            HarassMenu.Add("EHarass", new CheckBox("Use E"));
+
+            FarmingMenu = Menu.AddSubMenu("Lane/Jungle Clear", "FarmSettings");
+
+            FarmingMenu.AddLabel("Lane/Jungle Clear");
+            FarmingMenu.Add("QLaneClear", new CheckBox("Use Q LaneClear"));
+            FarmingMenu.Add("QlaneclearMana", new Slider("Mana < %", 45, 0, 100));
+            FarmingMenu.Add("WLaneClear", new CheckBox("Use W LaneClear"));
+            FarmingMenu.Add("WlaneclearMana", new Slider("Mana < %", 45, 0, 100));
+            FarmingMenu.Add("ELaneClear", new CheckBox("Use E LaneClear"));
+            FarmingMenu.Add("ElaneclearHP", new Slider("HP < %", 10, 0, 100));
+
+            FarmingMenu.AddLabel("Last Hit Settings");
+            FarmingMenu.Add("Qlasthit", new CheckBox("Use Q LastHit"));
+            FarmingMenu.Add("Elasthit", new CheckBox("Use E LastHit"));
+            FarmingMenu.Add("QlasthitMana", new Slider("Mana < %", 45, 0, 100));
+
+            MiscMenu = Menu.AddSubMenu("More Settings", "Misc");
+
+            MiscMenu.AddLabel("Auto");
+            MiscMenu.Add("autoQ", new CheckBox("Use Auto Q to Flee/Escape"));         
+            MiscMenu.Add("autoR", new CheckBox("Use Auto R in Dangerous Spell"));
+            MiscMenu.Add("autoE", new CheckBox("Use Auto E"));
+            MiscMenu.Add("autoEenemyHP", new Slider("Enemy HP < %", 45, 0, 100));
+
+            MiscMenu.AddLabel("KillSteal");
+            MiscMenu.Add("Qkill", new CheckBox("Use Q KillSteal"));
+            MiscMenu.Add("Ekill", new CheckBox("Use E KillSteal"));
+
+            MiscMenu.AddLabel("Activator");
+            MiscMenu.Add("useTiamat", new CheckBox("Use Tiamat,Hydra"));
+            MiscMenu.Add("useHP", new CheckBox("Use Health Potion"));           
+            MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
+            MiscMenu.Add("useMana", new CheckBox("Use Mana Potion"));
+            MiscMenu.Add("useManaV", new Slider("Mana < %", 45, 0, 100));
+            MiscMenu.Add("useCrystal", new CheckBox("Use Crystal Flask"));
+            MiscMenu.Add("useCrystalHPV", new Slider("HP < %", 45, 0, 100));
+            MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 45, 0, 100));
+
+            DrawMenu = Menu.AddSubMenu("Draw Settings", "Drawings");
+            DrawMenu.Add("drawQ", new CheckBox("Draw Q"));
+            DrawMenu.Add("drawQpos", new CheckBox("Draw Q Position"));
+            DrawMenu.Add("drawE", new CheckBox("Draw E"));
+            Menu.AddLabel("Perrrrrrrrrfect Ass");
+
+            Game.OnTick += Game_OnTick;
+            Drawing.OnDraw += Drawing_OnDraw;
+            GameObject.OnCreate += GameObject_OnCreate;
+            GameObject.OnDelete += GameObject_OnDelete;
+
+            Chat.Print("Perrrrrrrrrfect Ass", System.Drawing.Color.Red);
+        }
+        private static void GameObject_OnCreate(GameObject obj, EventArgs args)
+        {
+            if (obj.Name == "olaf_axe_totem_team_id_green.troy")
+            {
+                olafAxe.Object = obj;
+                olafAxe.ExpireTime = Game.Time + 8;
+                olafAxe.NetworkId = obj.NetworkId;
+                olafAxe.AxePos = obj.Position;
+            }
+        }
+        private static void GameObject_OnDelete(GameObject obj, EventArgs args)
+        {
+            if (obj.Name == "olaf_axe_totem_team_id_green.troy")
+            {
+                olafAxe.Object = null;
+            }
+        }
+        private static void Game_OnTick(EventArgs args)
+        {
+            var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;
+            var Mpot = MiscMenu["useMana"].Cast<CheckBox>().CurrentValue;
+            var Crystal = MiscMenu["useCrystal"].Cast<CheckBox>().CurrentValue;
+            var HPv = MiscMenu["useHPv"].Cast<Slider>().CurrentValue;
+            var Manav = MiscMenu["useManav"].Cast<Slider>().CurrentValue;
+            var CrystalHPv = MiscMenu["useCrystalHPv"].Cast<Slider>().CurrentValue;
+            var CrystalManav = MiscMenu["useCrystalManav"].Cast<Slider>().CurrentValue;
+            var useItem = MiscMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+            var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
+
+            if (HPpot && Player.Instance.HealthPercent < HPv)
+            {
+                if (Item.HasItem(Healthpot.Id) && Item.CanUseItem(Healthpot.Id) && !Player.HasBuff("RegenerationPotion"))
+                {
+                    Healthpot.Cast();
+                }
+            }
+
+            if (Mpot && Player.Instance.ManaPercent < Manav)
+            {
+                if (Item.HasItem(Manapot.Id) && Item.CanUseItem(Manapot.Id) && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
+                {
+                    Manapot.Cast();
+                }
+            }
+            
+            if (Crystal && Player.Instance.HealthPercent < CrystalHPv || Crystal && Player.Instance.ManaPercent < CrystalManav)
+            {
+                if (Item.HasItem(CrystalFlask.Id) && Item.CanUseItem(CrystalFlask.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
+                {
+                    CrystalFlask.Cast();
+                }
+               
+            }
+
+            if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie && target.HealthPercent < 100)
+            {
+                HandleItems();
+            }
+
+
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
+            {
+                Combo();
+            }
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
+            {
+                Harass();
+            }
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear))
+            {
+                LaneClear();
+            }
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LastHit))
+            {
+                LastHit();
+            }
+            KillSteal();
+            autoE();
+            autoR();
+
+            
+        }
+        private static void Combo()
+        {
+            var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
+            var useQ = ComboMenu["QCombo"].Cast<CheckBox>().CurrentValue;
+            var useW = ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue;
+            var useE = ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue;
+            var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
+            var useItem = MiscMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+
+            if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
+            {
+                Q.Cast(target);
+            }
+            if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            {
+                E.Cast(target);
+            }
+            if (W.IsReady() && useW && target.IsValidTarget(150) && !target.IsDead && !target.IsZombie)
+            {
+                W.Cast();
+            }
+            if (R.IsReady() && useR && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            {
+                R.Cast();
+            }
+            if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie)
+            {
+                HandleItems();
+            }
+
+        }
+        private static void KillSteal()
+        {
+            var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
+            var useQ = MiscMenu["Qkill"].Cast<CheckBox>().CurrentValue;
+            var useE = MiscMenu["Ekill"].Cast<CheckBox>().CurrentValue;
+
+            if (Q.IsReady() && useQ && target.IsValidTarget(Q.Range) && !target.IsZombie && target.Health <= _Player.GetSpellDamage(target, SpellSlot.Q))
+            {
+                Q.Cast(target);
+            }
+            if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsZombie && target.Health <= _Player.GetSpellDamage(target, SpellSlot.E))
+            {
+                E.Cast(target);
+            }
+        }
+
+        internal static void HandleItems()
+        {
+            //HYDRA
+            if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                Item.UseItem(3077);
+
+            //TİAMAT
+            if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                Item.UseItem(3074);
+
+            //NEW ITEM
+            if (Item.HasItem(3748) && Item.CanUseItem(3748))
+                Item.UseItem(3748);
+
+
+
+
+        }
+
+        private static void Harass()
+        {
+            var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
+            var useQ = HarassMenu["QHarass"].Cast<CheckBox>().CurrentValue;
+            var useW = HarassMenu["WHarass"].Cast<CheckBox>().CurrentValue;
+            var useE = HarassMenu["EHarass"].Cast<CheckBox>().CurrentValue;
+
+            if (Q.IsReady() && useQ && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
+            {
+                Q.Cast(target);
+            }
+            if (W.IsReady() && useW && target.IsValidTarget(_Player.AttackRange) && !target.IsDead && !target.IsZombie)
+            {
+                W.Cast();
+            }
+            if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            {
+                E.Cast(target);
+            }
+
+        }
+        private static void LaneClear()
+        {
+            var useQ = FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue;
+            var useW = FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue;
+            var useE = FarmingMenu["ELaneClear"].Cast<CheckBox>().CurrentValue;
+            var Qmana = FarmingMenu["QlaneclearMana"].Cast<Slider>().CurrentValue;
+            var Wmana = FarmingMenu["WlaneclearMana"].Cast<Slider>().CurrentValue;
+            var EHP = FarmingMenu["ElaneclearHP"].Cast<Slider>().CurrentValue;
+            var minions = ObjectManager.Get<Obj_AI_Base>().OrderBy(m => m.Health).Where(m => m.IsMinion && m.IsEnemy && !m.IsDead);
+            foreach (var minion in minions)
+            {
+                if (useQ && Q.IsReady() && !minion.IsValidTarget(E.Range) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > Qmana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q))
+                {
+                    Q.Cast(minion);
+                }
+                if (useW && W.IsReady() && Player.Instance.ManaPercent > Wmana && minion.IsValidTarget(_Player.AttackRange))
+                {
+                    W.Cast();
+                }
+                if (useE && E.IsReady() && Player.Instance.HealthPercent > EHP && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.E))
+                {
+                    E.Cast(minion);
+                }
+            }
+        }
+        private static void LastHit()
+        {
+            var useQ = FarmingMenu["Qlasthit"].Cast<CheckBox>().CurrentValue;
+            var useE = FarmingMenu["Elasthit"].Cast<CheckBox>().CurrentValue;
+            var mana = FarmingMenu["QlasthitMana"].Cast<Slider>().CurrentValue;
+            var minions = ObjectManager.Get<Obj_AI_Base>().OrderBy(m => m.Health).Where(m => m.IsMinion && m.IsEnemy && !m.IsDead);
+            foreach (var minion in minions)
+            {
+                if (useQ && Q.IsReady() && !minion.IsValidTarget(E.Range) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > mana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q))
+                {
+                    Q.Cast(minion);
+                }
+                if (useE && E.IsReady() && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.E))
+                {
+                    E.Cast(minion);
+                }
+            }
+        }
+        private static void autoE()
+        {
+            var target = TargetSelector.GetTarget(E.Range, DamageType.True);
+            var useE = MiscMenu["autoE"].Cast<CheckBox>().CurrentValue;
+            var enemyHP = MiscMenu["autoEenemyHP"].Cast<Slider>().CurrentValue;
+
+            if (useE && E.IsReady() && target.IsValidTarget(E.Range) && target.HealthPercent < enemyHP)
+            {
+                E.Cast(target);
+            }
+        }
+        private static void autoR()
+        {
+            var useR = MiscMenu["autoR"].Cast<CheckBox>().CurrentValue;
+
+            if (useR && R.IsReady() && _Player.HasBuffOfType(BuffType.Stun)
+            || _Player.HasBuffOfType(BuffType.Fear) 
+            || _Player.HasBuffOfType(BuffType.Charm) 
+            || _Player.HasBuffOfType(BuffType.Silence) 
+            || _Player.HasBuffOfType(BuffType.Snare) 
+            || _Player.HasBuffOfType(BuffType.Taunt)
+            || _Player.HasBuffOfType(BuffType.Suppression))
+            {
+                R.Cast();
+            }
+        }
+        private static void Drawing_OnDraw(EventArgs args)
+        {
+            var drawAxePosition = DrawMenu["drawQpos"].Cast<CheckBox>().CurrentValue;
+
+            if (drawAxePosition && olafAxe.Object != null)
+            {
+                new Circle() { Color = Color.Green, BorderWidth = 6, Radius = 85 }.Draw(olafAxe.Object.Position);
+            }
+            if (DrawMenu["drawQ"].Cast<CheckBox>().CurrentValue)
+            {
+                new Circle() { Color = Color.Red, BorderWidth = 1, Radius = Q.Range }.Draw(_Player.Position);
+            }
+            if (DrawMenu["drawE"].Cast<CheckBox>().CurrentValue)
+            {
+                new Circle() { Color = Color.Red, BorderWidth = 1, Radius = E.Range }.Draw(_Player.Position);
+            }
+        }
+    }
+}
