@@ -27,7 +27,7 @@ namespace Perfect_Olaf
         public static Spell.Active W;
         public static Spell.Targeted E;
         public static Spell.Active R;
-        public static Menu Menu, SkillMenu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu;
+        public static Menu Menu, SkillMenu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu, UpdateMenu;
         private static readonly OlafAxe olafAxe = new OlafAxe();
         static Item Healthpot;
         static Item Manapot;
@@ -41,12 +41,14 @@ namespace Perfect_Olaf
         public static AIHeroClient _Player
         {
             get { return ObjectManager.Player; }
+
         }
 
         private static void Loading_OnLoadingComplete(EventArgs args)
         {
             if (Player.Instance.ChampionName != "Olaf")
                 return;
+
 
             Bootstrap.Init(null);
 
@@ -73,6 +75,7 @@ namespace Perfect_Olaf
             ComboMenu.Add("WCombo", new CheckBox("Use W"));
             ComboMenu.Add("ECombo", new CheckBox("Use E"));
             ComboMenu.Add("RCombo", new CheckBox("Use R"));
+            ComboMenu.Add("useTiamat", new CheckBox("Use Items"));
 
             HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
             HarassMenu.AddLabel("Harass Settings");
@@ -80,35 +83,52 @@ namespace Perfect_Olaf
             HarassMenu.Add("WHarass", new CheckBox("Use W"));
             HarassMenu.Add("EHarass", new CheckBox("Use E"));
 
-            FarmingMenu = Menu.AddSubMenu("Lane/Jungle Clear", "FarmSettings");
+            FarmingMenu = Menu.AddSubMenu("Lane Clear", "FarmSettings");
 
-            FarmingMenu.AddLabel("Lane/Jungle Clear");
+            FarmingMenu.AddLabel("Lane Clear");
             FarmingMenu.Add("QLaneClear", new CheckBox("Use Q LaneClear"));
             FarmingMenu.Add("QlaneclearMana", new Slider("Mana < %", 45, 0, 100));
             FarmingMenu.Add("WLaneClear", new CheckBox("Use W LaneClear"));
             FarmingMenu.Add("WlaneclearMana", new Slider("Mana < %", 45, 0, 100));
             FarmingMenu.Add("ELaneClear", new CheckBox("Use E LaneClear"));
             FarmingMenu.Add("ElaneclearHP", new Slider("HP < %", 10, 0, 100));
+            FarmingMenu.AddLabel("I'm working on the Jungle Clear.");
+            FarmingMenu.AddLabel("Ending Soon!");
 
             FarmingMenu.AddLabel("Last Hit Settings");
             FarmingMenu.Add("Qlasthit", new CheckBox("Use Q LastHit"));
             FarmingMenu.Add("Elasthit", new CheckBox("Use E LastHit"));
             FarmingMenu.Add("QlasthitMana", new Slider("Mana < %", 45, 0, 100));
 
+            SmiteMenu = Menu.AddSubMenu("Smite Usage", "SmiteUsage");
+            SmiteMenu.AddLabel("Smite Usage");
+            SmiteMenu.Add("Use Smite?", new CheckBox("Use Smite"));
+            SmiteMenu.Add("Red?", new CheckBox("Red"));
+            SmiteMenu.Add("Blue?", new CheckBox("Blue"));
+            SmiteMenu.Add("Dragon?", new CheckBox("Dragon"));
+            SmiteMenu.Add("Baron?", new CheckBox("Baron"));
+            
+
             MiscMenu = Menu.AddSubMenu("More Settings", "Misc");
 
             MiscMenu.AddLabel("Auto");
+            MiscMenu.Add("Auto Ignite", new CheckBox("Auto Ignite"));
             MiscMenu.Add("autoQ", new CheckBox("Use Auto Q to Flee/Escape"));         
             MiscMenu.Add("autoR", new CheckBox("Use Auto R in Dangerous Spell"));
             MiscMenu.Add("autoE", new CheckBox("Use Auto E"));
             MiscMenu.Add("autoEenemyHP", new Slider("Enemy HP < %", 45, 0, 100));
+            MiscMenu.AddSeparator();
+            MiscMenu.AddLabel("Items");
+            MiscMenu.AddSeparator();
+            MiscMenu.AddLabel("BOTRK,Bilgewater Cutlass Settings");
+            MiscMenu.Add("botrkHP", new Slider("My HP < %", 60, 0, 100));
+            MiscMenu.Add("botrkenemyHP", new Slider("Enemy HP < %", 60, 0, 100));
 
             MiscMenu.AddLabel("KillSteal");
             MiscMenu.Add("Qkill", new CheckBox("Use Q KillSteal"));
             MiscMenu.Add("Ekill", new CheckBox("Use E KillSteal"));
 
             MiscMenu.AddLabel("Activator");
-            MiscMenu.Add("useTiamat", new CheckBox("Use Tiamat,Hydra"));
             MiscMenu.Add("useHP", new CheckBox("Use Health Potion"));           
             MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
             MiscMenu.Add("useMana", new CheckBox("Use Mana Potion"));
@@ -118,17 +138,27 @@ namespace Perfect_Olaf
             MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 45, 0, 100));
 
             DrawMenu = Menu.AddSubMenu("Draw Settings", "Drawings");
+            DrawMenu.Add("drawAA", new CheckBox("Draw AA Range"));
             DrawMenu.Add("drawQ", new CheckBox("Draw Q"));
             DrawMenu.Add("drawQpos", new CheckBox("Draw Q Position"));
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
-            Menu.AddLabel("Perrrrrrrrrfect Ass");
+
+            UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
+            UpdateMenu.AddLabel("V0.1.1");
+            UpdateMenu.AddLabel("-Added BOTRK and Bilgewater Cutlass Usage");
+            UpdateMenu.AddLabel("-Added Smite Usage");
+            UpdateMenu.AddLabel("-Added Ignite Usage");
+            UpdateMenu.AddLabel("-Added AA Range Drawings");
+            UpdateMenu.AddLabel("-Fixed Cast W");
+            UpdateMenu.AddLabel("-Fixed Cast Tiamat");
+            UpdateMenu.AddLabel("-Changed LaneClear");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
             GameObject.OnCreate += GameObject_OnCreate;
             GameObject.OnDelete += GameObject_OnDelete;
 
-            Chat.Print("Perrrrrrrrrfect Ass", System.Drawing.Color.Red);
+            Chat.Print("Perrrrrrrrrfect Addon", System.Drawing.Color.Red);
         }
         private static void GameObject_OnCreate(GameObject obj, EventArgs args)
         {
@@ -147,6 +177,8 @@ namespace Perfect_Olaf
                 olafAxe.Object = null;
             }
         }
+
+
         private static void Game_OnTick(EventArgs args)
         {
             var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;
@@ -156,8 +188,9 @@ namespace Perfect_Olaf
             var Manav = MiscMenu["useManav"].Cast<Slider>().CurrentValue;
             var CrystalHPv = MiscMenu["useCrystalHPv"].Cast<Slider>().CurrentValue;
             var CrystalManav = MiscMenu["useCrystalManav"].Cast<Slider>().CurrentValue;
-            var useItem = MiscMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+            var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
+            var igntarget = TargetSelector.GetTarget(600, DamageType.True);
 
             if (HPpot && Player.Instance.HealthPercent < HPv)
             {
@@ -209,8 +242,9 @@ namespace Perfect_Olaf
             KillSteal();
             autoE();
             autoR();
-
             
+
+
         }
         private static void Combo()
         {
@@ -219,7 +253,7 @@ namespace Perfect_Olaf
             var useW = ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue;
             var useE = ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue;
             var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
-            var useItem = MiscMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+            var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
 
             if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
             {
@@ -229,13 +263,16 @@ namespace Perfect_Olaf
             {
                 E.Cast(target);
             }
-            if (W.IsReady() && useW && target.IsValidTarget(150) && !target.IsDead && !target.IsZombie)
+            if (W.IsReady() && useW && target.IsValidTarget(300) && !target.IsDead && !target.IsZombie)
             {
                 W.Cast();
             }
-            if (R.IsReady() && useR && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            if (R.IsReady() && useR && target.IsValidTarget(500) && !target.IsDead && !target.IsZombie)
             {
-                R.Cast();
+                if (target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
+                {
+                    R.Cast();
+                }
             }
             if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie)
             {
@@ -261,21 +298,33 @@ namespace Perfect_Olaf
 
         internal static void HandleItems()
         {
+            var botrktarget = TargetSelector.GetTarget(550, DamageType.Physical);
+            var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+            var useBotrkHP = MiscMenu["botrkHP"].Cast<Slider>().CurrentValue;
+            var useBotrkEnemyHP = MiscMenu["botrkenemyHP"].Cast<Slider>().CurrentValue;
             //HYDRA
-            if (Item.HasItem(3077) && Item.CanUseItem(3077))
+            if (useItem && Item.HasItem(3077) && Item.CanUseItem(3077))
                 Item.UseItem(3077);
 
             //TİAMAT
-            if (Item.HasItem(3074) && Item.CanUseItem(3074))
+            if (useItem && Item.HasItem(3074) && Item.CanUseItem(3074))
                 Item.UseItem(3074);
 
             //NEW ITEM
-            if (Item.HasItem(3748) && Item.CanUseItem(3748))
+            if (useItem && Item.HasItem(3748) && Item.CanUseItem(3748))
                 Item.UseItem(3748);
 
+            //BİLGEWATER CUTLASS
+            if (useItem && Item.HasItem(3144) && Item.CanUseItem(3144) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP)
+                Item.UseItem(3144, botrktarget);
 
+            //BOTRK
+            if (useItem && Item.HasItem(3153) && Item.CanUseItem(3153) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP)
+                Item.UseItem(3153, botrktarget);
 
-
+            //YOUMU
+            if (useItem && Item.HasItem(3142) && Item.CanUseItem(3142))
+                Item.UseItem(3142);
         }
 
         private static void Harass()
@@ -314,7 +363,7 @@ namespace Perfect_Olaf
                 {
                     Q.Cast(minion);
                 }
-                if (useW && W.IsReady() && Player.Instance.ManaPercent > Wmana && minion.IsValidTarget(_Player.AttackRange))
+                if (useW && W.IsReady() && Player.Instance.ManaPercent > Wmana && minion.IsValidTarget(_Player.AttackRange) && Player.Instance.HealthPercent < 50)
                 {
                     W.Cast();
                 }
