@@ -56,12 +56,12 @@ namespace Perfect_Olaf
             Manapot = new Item(2004, 0);
             CrystalFlask = new Item(2041, 0);
             uint level = (uint)Player.Instance.Level;
-            Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1600, 100)
+            Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1550, 100)
             {
                 AllowedCollisionCount = int.MaxValue, MinimumHitChance = HitChance.High
             };
             W = new Spell.Active(SpellSlot.W);
-            E = new Spell.Targeted(SpellSlot.E, 320);
+            E = new Spell.Targeted(SpellSlot.E, 325);
             R = new Spell.Active(SpellSlot.R);
 
             Menu = MainMenu.AddMenu("Perfect Olaf", "perfectolaf");
@@ -92,8 +92,14 @@ namespace Perfect_Olaf
             FarmingMenu.Add("WlaneclearMana", new Slider("Mana < %", 45, 0, 100));
             FarmingMenu.Add("ELaneClear", new CheckBox("Use E LaneClear"));
             FarmingMenu.Add("ElaneclearHP", new Slider("HP < %", 10, 0, 100));
-            FarmingMenu.AddLabel("I'm working on the Jungle Clear.");
-            FarmingMenu.AddLabel("Ending Soon!");
+
+            FarmingMenu.AddLabel("Jungle Clear");
+            FarmingMenu.Add("Qjungle", new CheckBox("Use Q in Jungle"));
+            FarmingMenu.Add("QjungleMana", new Slider("Mana < %", 45, 0, 100));
+            FarmingMenu.Add("Wjungle", new CheckBox("Use W in Jungle"));
+            FarmingMenu.Add("WjungleMana", new Slider("Mana < %", 45, 0, 100));
+            FarmingMenu.Add("Ejungle", new CheckBox("Use E in Jungle"));
+            FarmingMenu.Add("EjungleHP", new Slider("HP < %", 25, 0, 100));
 
             FarmingMenu.AddLabel("Last Hit Settings");
             FarmingMenu.Add("Qlasthit", new CheckBox("Use Q LastHit"));
@@ -144,14 +150,8 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.1");
-            UpdateMenu.AddLabel("-Added BOTRK and Bilgewater Cutlass Usage");
-            UpdateMenu.AddLabel("-Added Smite Usage");
-            UpdateMenu.AddLabel("-Added Ignite Usage");
-            UpdateMenu.AddLabel("-Added AA Range Drawings");
-            UpdateMenu.AddLabel("-Fixed Cast W");
-            UpdateMenu.AddLabel("-Fixed Cast Tiamat");
-            UpdateMenu.AddLabel("-Changed LaneClear");
+            UpdateMenu.AddLabel("V0.1.2");
+            UpdateMenu.AddLabel("-Added Jungle Clear!");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -239,6 +239,10 @@ namespace Perfect_Olaf
             {
                 LastHit();
             }
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.JungleClear))
+            {
+                JungleClear();
+            }
             KillSteal();
             autoE();
             autoR();
@@ -299,6 +303,7 @@ namespace Perfect_Olaf
         internal static void HandleItems()
         {
             var botrktarget = TargetSelector.GetTarget(550, DamageType.Physical);
+            var youmutarget = TargetSelector.GetTarget(800, DamageType.Physical);
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             var useBotrkHP = MiscMenu["botrkHP"].Cast<Slider>().CurrentValue;
             var useBotrkEnemyHP = MiscMenu["botrkenemyHP"].Cast<Slider>().CurrentValue;
@@ -323,7 +328,7 @@ namespace Perfect_Olaf
                 Item.UseItem(3153, botrktarget);
 
             //YOUMU
-            if (useItem && Item.HasItem(3142) && Item.CanUseItem(3142))
+            if (useItem && Item.HasItem(3142) && Item.CanUseItem(3142) && youmutarget.IsValidTarget(800))
                 Item.UseItem(3142);
         }
 
@@ -371,6 +376,32 @@ namespace Perfect_Olaf
                 {
                     E.Cast(minion);
                 }
+            }
+        }
+        private static void JungleClear()
+        {
+            var useQ = FarmingMenu["Qjungle"].Cast<CheckBox>().CurrentValue;
+            var useQMana = FarmingMenu["QjungleMana"].Cast<Slider>().CurrentValue;
+            var useW = FarmingMenu["Wjungle"].Cast<CheckBox>().CurrentValue;
+            var useWMana = FarmingMenu["WjungleMana"].Cast<Slider>().CurrentValue;
+            var useE = FarmingMenu["Ejungle"].Cast<CheckBox>().CurrentValue;
+            var useEHP = FarmingMenu["EjungleHP"].Cast<Slider>().CurrentValue;
+            foreach (var monster in EntityManager.MinionsAndMonsters.Monsters)
+            {
+                if (useQ && Q.IsReady() && Player.Instance.ManaPercent > useQMana)
+                {
+                    Q.Cast(monster);
+                }
+                if (useW && W.IsReady() && Player.Instance.ManaPercent > useWMana)
+                {
+                    W.Cast();
+                }
+                if (useE && E.IsReady() && Player.Instance.HealthPercent > useEHP)
+                {
+                    E.Cast(monster);
+                }
+
+                HandleItems();
             }
         }
         private static void LastHit()
