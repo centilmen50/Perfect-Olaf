@@ -28,10 +28,17 @@ namespace Perfect_Olaf
         public static Spell.Targeted E;
         public static Spell.Active R;
         public static Menu Menu, SkillMenu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu, UpdateMenu;
+        static Spell.Targeted Smite = null;
         private static readonly OlafAxe olafAxe = new OlafAxe();
         static Item Healthpot;
         static Item Manapot;
         static Item CrystalFlask;
+        public static SpellSlot SmiteSlot = SpellSlot.Unknown;
+        public static SpellSlot IgniteSlot = SpellSlot.Unknown;
+        private static readonly int[] SmitePurple = { 3713, 3726, 3725, 3726, 3723 };
+        private static readonly int[] SmiteGrey = { 3711, 3722, 3721, 3720, 3719 };
+        private static readonly int[] SmiteRed = { 3715, 3718, 3717, 3716, 3714 };
+        private static readonly int[] SmiteBlue = { 3706, 3710, 3709, 3708, 3707 };
 
         static void Main(string[] args)
         {
@@ -44,10 +51,36 @@ namespace Perfect_Olaf
 
         }
 
+        private static string Smitetype
+        {
+            get
+            {
+                if (SmiteBlue.Any(i => Item.HasItem(i)))
+                    return "s5_summonersmiteplayerganker";
+
+                if (SmiteRed.Any(i => Item.HasItem(i)))
+                    return "s5_summonersmiteduel";
+
+                if (SmiteGrey.Any(i => Item.HasItem(i)))
+                    return "s5_summonersmitequick";
+
+                if (SmitePurple.Any(i => Item.HasItem(i)))
+                    return "itemsmiteaoe";
+
+                return "summonersmite";
+            }
+        }
+
         private static void Loading_OnLoadingComplete(EventArgs args)
         {
             if (Player.Instance.ChampionName != "Olaf")
                 return;
+
+            SpellDataInst smite = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).First() : null;
+            if (smite != null)
+            {
+                Smite = new Spell.Targeted(smite.Slot, 500);
+            }
 
 
             Bootstrap.Init(null);
@@ -75,6 +108,7 @@ namespace Perfect_Olaf
             ComboMenu.Add("WCombo", new CheckBox("Use W"));
             ComboMenu.Add("ECombo", new CheckBox("Use E"));
             ComboMenu.Add("RCombo", new CheckBox("Use R"));
+            ComboMenu.Add("RComboCustom", new CheckBox("Use R for Custom Champions(e.g Ahri)",false));
             ComboMenu.Add("useTiamat", new CheckBox("Use Items"));
 
             HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
@@ -106,13 +140,18 @@ namespace Perfect_Olaf
             FarmingMenu.Add("Elasthit", new CheckBox("Use E LastHit"));
             FarmingMenu.Add("QlasthitMana", new Slider("Mana < %", 45, 0, 100));
 
-            SmiteMenu = Menu.AddSubMenu("Smite Usage", "SmiteUsage");
-            SmiteMenu.AddLabel("Smite Usage");
-            SmiteMenu.Add("Use Smite?", new CheckBox("Use Smite"));
-            SmiteMenu.Add("Red?", new CheckBox("Red"));
-            SmiteMenu.Add("Blue?", new CheckBox("Blue"));
-            SmiteMenu.Add("Dragon?", new CheckBox("Dragon"));
-            SmiteMenu.Add("Baron?", new CheckBox("Baron"));
+            SetSmiteSlot();
+            if (SmiteSlot != SpellSlot.Unknown)
+            {
+                SmiteMenu = Menu.AddSubMenu("Smite Usage", "SmiteUsage");
+                SmiteMenu.AddLabel("Smite Usage");
+                SmiteMenu.Add("Use Smite?", new CheckBox("Use Smite"));
+                SmiteMenu.Add("SmiteEnemy", new CheckBox("Use Smite Combo for Enemy!"));
+                SmiteMenu.Add("Red?", new CheckBox("Red"));
+                SmiteMenu.Add("Blue?", new CheckBox("Blue"));
+                SmiteMenu.Add("Dragon?", new CheckBox("Dragon"));
+                SmiteMenu.Add("Baron?", new CheckBox("Baron"));
+            }
             
 
             MiscMenu = Menu.AddSubMenu("More Settings", "Misc");
@@ -150,8 +189,9 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.2");
-            UpdateMenu.AddLabel("-Added Jungle Clear!");
+            UpdateMenu.AddLabel("V0.1.3");
+            UpdateMenu.AddLabel("-Fixed Cast Smite!");
+            UpdateMenu.AddLabel("-Fixed Cast R!");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -177,6 +217,16 @@ namespace Perfect_Olaf
                 olafAxe.Object = null;
             }
         }
+        private static void SetSmiteSlot()
+        {
+            foreach (
+                var spell in
+                    _Player.Spellbook.Spells.Where(
+                        spell => string.Equals(spell.Name, Smitetype, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SmiteSlot = spell.Slot;
+            }
+        }
 
 
         private static void Game_OnTick(EventArgs args)
@@ -191,6 +241,27 @@ namespace Perfect_Olaf
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             var target = TargetSelector.GetTarget(Q.Range, DamageType.Physical);
             var igntarget = TargetSelector.GetTarget(600, DamageType.True);
+            var t = TargetSelector.GetTarget(600, DamageType.True);
+
+            if (Smite != null)
+            {
+                if (Smite.IsReady() && SmiteMenu["Use Smite?"].Cast<CheckBox>().CurrentValue)
+                {
+                    Obj_AI_Minion Mob = EntityManager.MinionsAndMonsters.GetJungleMonsters(_Player.Position, Smite.Range).FirstOrDefault();
+
+                    if (Mob != default(Obj_AI_Minion))
+                    {
+                        bool kill = GetSmiteDamage() >= Mob.Health;
+
+                        if (kill)
+                        {
+                            if ((Mob.Name.Contains("SRU_Dragon") || Mob.Name.Contains("SRU_Baron"))) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Red") && SmiteMenu["Red?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Blue") && SmiteMenu["Blue?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                        }
+                    }
+                }
+            }
 
             if (HPpot && Player.Instance.HealthPercent < HPv)
             {
@@ -226,6 +297,7 @@ namespace Perfect_Olaf
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
             {
                 Combo();
+                SmiteOnTarget(t);
             }
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
             {
@@ -257,6 +329,7 @@ namespace Perfect_Olaf
             var useW = ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue;
             var useE = ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue;
             var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
+            var useRCustom = ComboMenu["RComboCustom"].Cast<CheckBox>().CurrentValue;
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
 
             if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
@@ -273,7 +346,11 @@ namespace Perfect_Olaf
             }
             if (R.IsReady() && useR && target.IsValidTarget(500) && !target.IsDead && !target.IsZombie)
             {
-                if (target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
+                if (useRCustom && target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
+                {
+                    R.Cast();
+                }
+                else if (!useRCustom)
                 {
                     R.Cast();
                 }
@@ -297,6 +374,19 @@ namespace Perfect_Olaf
             if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsZombie && target.Health <= _Player.GetSpellDamage(target, SpellSlot.E))
             {
                 E.Cast(target);
+            }
+        }
+
+        private static void SmiteOnTarget(AIHeroClient t)
+        {
+            var range = 700f;
+            var use = SmiteMenu["SmiteEnemy"].Cast<CheckBox>().CurrentValue;
+            var itemCheck = SmiteBlue.Any(i => Item.HasItem(i)) || SmiteRed.Any(i => Item.HasItem(i));
+            if (itemCheck && use &&
+                _Player.Spellbook.CanUseSpell(SmiteSlot) == SpellState.Ready &&
+                t.Distance(_Player.Position) < range)
+            {
+                _Player.Spellbook.CastSpell(SmiteSlot, t);
             }
         }
 
@@ -447,6 +537,19 @@ namespace Perfect_Olaf
             {
                 R.Cast();
             }
+        }
+
+        static float GetSmiteDamage()
+        {
+            float damage = new float();
+
+            if (_Player.Level < 10) damage = 360 + (_Player.Level - 1) * 30;
+
+            else if (_Player.Level < 15) damage = 280 + (_Player.Level - 1) * 40;
+
+            else if (_Player.Level < 19) damage = 150 + (_Player.Level - 1) * 50;
+
+            return damage;
         }
         private static void Drawing_OnDraw(EventArgs args)
         {
