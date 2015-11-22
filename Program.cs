@@ -108,7 +108,7 @@ namespace Perfect_Olaf
             ComboMenu.Add("WCombo", new CheckBox("Use W"));
             ComboMenu.Add("ECombo", new CheckBox("Use E"));
             ComboMenu.Add("RCombo", new CheckBox("Use R"));
-            ComboMenu.Add("RComboCustom", new CheckBox("Use R for Custom Champions(e.g Ahri)",false));
+            ComboMenu.Add("RComboCustom", new CheckBox("Use R for CC Champions(e.g Ahri)",false));
             ComboMenu.Add("useTiamat", new CheckBox("Use Items"));
 
             HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
@@ -189,8 +189,8 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.3");
-            UpdateMenu.AddLabel("-Fixed Cast Smite!");
+            UpdateMenu.AddLabel("V0.1.4");
+            UpdateMenu.AddLabel("-Freeze Buff Added to AutoR");
             UpdateMenu.AddLabel("-Fixed Cast R!");
 
             Game.OnTick += Game_OnTick;
@@ -344,13 +344,13 @@ namespace Perfect_Olaf
             {
                 W.Cast();
             }
-            if (R.IsReady() && useR && target.IsValidTarget(500) && !target.IsDead && !target.IsZombie)
+            if (R.IsReady() && target.IsValidTarget(600) && !target.IsDead && !target.IsZombie)
             {
                 if (useRCustom && target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
                 {
                     R.Cast();
                 }
-                else if (!useRCustom)
+                else if (!useRCustom && useR)
                 {
                     R.Cast();
                 }
@@ -533,7 +533,9 @@ namespace Perfect_Olaf
             || _Player.HasBuffOfType(BuffType.Silence) 
             || _Player.HasBuffOfType(BuffType.Snare) 
             || _Player.HasBuffOfType(BuffType.Taunt)
-            || _Player.HasBuffOfType(BuffType.Suppression))
+            || _Player.HasBuffOfType(BuffType.Suppression)
+            || _Player.HasBuffOfType(BuffType.Sleep)
+            || _Player.HasBuffOfType(BuffType.Frenzy))
             {
                 R.Cast();
             }
