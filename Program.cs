@@ -32,7 +32,9 @@ namespace Perfect_Olaf
         private static readonly OlafAxe olafAxe = new OlafAxe();
         static Item Healthpot;
         static Item Manapot;
-        static Item CrystalFlask;
+        static Item HuntersPotion;
+        static Item CorruptionPotion;
+        static Item RefillablePotion;
         public static SpellSlot SmiteSlot = SpellSlot.Unknown;
         public static SpellSlot IgniteSlot = SpellSlot.Unknown;
         private static readonly int[] SmitePurple = { 3713, 3726, 3725, 3726, 3723 };
@@ -87,7 +89,9 @@ namespace Perfect_Olaf
 
             Healthpot = new Item(2003, 0);
             Manapot = new Item(2004, 0);
-            CrystalFlask = new Item(2041, 0);
+            RefillablePotion = new Item(2031, 0);
+            HuntersPotion = new Item(2032, 0);
+            CorruptionPotion = new Item(2033, 0);
             uint level = (uint)Player.Instance.Level;
             Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1550, 100)
             {
@@ -159,12 +163,11 @@ namespace Perfect_Olaf
             MiscMenu.AddLabel("Auto");
             MiscMenu.Add("Auto Ignite", new CheckBox("Auto Ignite"));
             MiscMenu.Add("autoQ", new CheckBox("Use Auto Q to Flee/Escape"));         
-            MiscMenu.Add("autoR", new CheckBox("Use Auto R in Dangerous Spell"));
-            MiscMenu.Add("autoE", new CheckBox("Use Auto E"));
+            MiscMenu.Add("autoR", new CheckBox("Use Auto R in Dangerous Spell",false));
+            MiscMenu.Add("autoE", new CheckBox("Use Auto E for Harass",false));
             MiscMenu.Add("autoEenemyHP", new Slider("Enemy HP < %", 45, 0, 100));
             MiscMenu.AddSeparator();
             MiscMenu.AddLabel("Items");
-            MiscMenu.AddSeparator();
             MiscMenu.AddLabel("BOTRK,Bilgewater Cutlass Settings");
             MiscMenu.Add("botrkHP", new Slider("My HP < %", 60, 0, 100));
             MiscMenu.Add("botrkenemyHP", new Slider("Enemy HP < %", 60, 0, 100));
@@ -178,7 +181,7 @@ namespace Perfect_Olaf
             MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
             MiscMenu.Add("useMana", new CheckBox("Use Mana Potion"));
             MiscMenu.Add("useManaV", new Slider("Mana < %", 45, 0, 100));
-            MiscMenu.Add("useCrystal", new CheckBox("Use Crystal Flask"));
+            MiscMenu.Add("useCrystal", new CheckBox("Use Refillable Potions"));
             MiscMenu.Add("useCrystalHPV", new Slider("HP < %", 45, 0, 100));
             MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 45, 0, 100));
 
@@ -189,9 +192,10 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.4");
+            UpdateMenu.AddLabel("V0.1.5");
             UpdateMenu.AddLabel("-Freeze Buff Added to AutoR");
             UpdateMenu.AddLabel("-Fixed Cast R!");
+            UpdateMenu.AddLabel("-Add New Potions!");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -278,14 +282,22 @@ namespace Perfect_Olaf
                     Manapot.Cast();
                 }
             }
-            
+
             if (Crystal && Player.Instance.HealthPercent < CrystalHPv || Crystal && Player.Instance.ManaPercent < CrystalManav)
             {
-                if (Item.HasItem(CrystalFlask.Id) && Item.CanUseItem(CrystalFlask.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
+                if (Item.HasItem(RefillablePotion.Id) && Item.CanUseItem(RefillablePotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
                 {
-                    CrystalFlask.Cast();
+                    RefillablePotion.Cast();
                 }
-               
+                else if (Item.HasItem(CorruptionPotion.Id) && Item.CanUseItem(CorruptionPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemDarkCrystalFlaskJungle"))
+                {
+                    CorruptionPotion.Cast();
+                }
+                else if (Item.HasItem(HuntersPotion.Id) && Item.CanUseItem(HuntersPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemCrystalFlaskJungle"))
+                {
+                    HuntersPotion.Cast();
+                }
+
             }
 
             if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie && target.HealthPercent < 100)
@@ -332,9 +344,9 @@ namespace Perfect_Olaf
             var useRCustom = ComboMenu["RComboCustom"].Cast<CheckBox>().CurrentValue;
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
 
-            if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
+            if (useQ && Q.IsReady() && Q.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie)
             {
-                Q.Cast(target);
+                Q.Cast(Q.GetPrediction(target).CastPosition);
             }
             if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
             {
@@ -344,21 +356,22 @@ namespace Perfect_Olaf
             {
                 W.Cast();
             }
+            if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie)
+            {
+                HandleItems();
+            }
             if (R.IsReady() && target.IsValidTarget(600) && !target.IsDead && !target.IsZombie)
             {
                 if (useRCustom && target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
                 {
                     R.Cast();
                 }
-                else if (!useRCustom && useR)
+                else if (useR)
                 {
                     R.Cast();
                 }
             }
-            if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie)
-            {
-                HandleItems();
-            }
+            
 
         }
         private static void KillSteal()
@@ -535,7 +548,11 @@ namespace Perfect_Olaf
             || _Player.HasBuffOfType(BuffType.Taunt)
             || _Player.HasBuffOfType(BuffType.Suppression)
             || _Player.HasBuffOfType(BuffType.Sleep)
-            || _Player.HasBuffOfType(BuffType.Frenzy))
+            || _Player.HasBuffOfType(BuffType.Polymorph)
+            || _Player.HasBuffOfType(BuffType.Frenzy)
+            || _Player.HasBuffOfType(BuffType.Disarm)
+            || _Player.HasBuffOfType(BuffType.NearSight)
+            || _Player.HasBuffOfType(BuffType.Blind))
             {
                 R.Cast();
             }
