@@ -24,6 +24,7 @@ namespace Perfect_Olaf
     class Program
     {
         public static Spell.Skillshot Q;
+        public static Spell.Skillshot Q2;
         public static Spell.Active W;
         public static Spell.Targeted E;
         public static Spell.Active R;
@@ -93,7 +94,11 @@ namespace Perfect_Olaf
             HuntersPotion = new Item(2032, 0);
             CorruptionPotion = new Item(2033, 0);
             uint level = (uint)Player.Instance.Level;
-            Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1550, 100)
+            Q = new Spell.Skillshot(SpellSlot.Q, 1000, SkillShotType.Linear, 250, 1550, 75)
+            {
+                AllowedCollisionCount = int.MaxValue, MinimumHitChance = HitChance.High
+            };
+            Q2 = new Spell.Skillshot(SpellSlot.Q, 900, SkillShotType.Linear, 250, 1550, 75)
             {
                 AllowedCollisionCount = int.MaxValue, MinimumHitChance = HitChance.High
             };
@@ -112,7 +117,6 @@ namespace Perfect_Olaf
             ComboMenu.Add("WCombo", new CheckBox("Use W"));
             ComboMenu.Add("ECombo", new CheckBox("Use E"));
             ComboMenu.Add("RCombo", new CheckBox("Use R"));
-            ComboMenu.Add("RComboCustom", new CheckBox("Use R for CC Champions(e.g Ahri)",false));
             ComboMenu.Add("useTiamat", new CheckBox("Use Items"));
 
             HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
@@ -191,8 +195,8 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.5.1");
-            UpdateMenu.AddLabel("-Many Bugs Fixed");
+            UpdateMenu.AddLabel("V0.1.6.0");
+            UpdateMenu.AddLabel("-5.24 Updated");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -334,30 +338,29 @@ namespace Perfect_Olaf
             var useW = ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue;
             var useE = ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue;
             var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
-            var useRCustom = ComboMenu["RComboCustom"].Cast<CheckBox>().CurrentValue;
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
 
-            if (useQ && Q.IsReady() && Q.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie)
+            if (useQ && Q.IsReady() && Q.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie && target.IsFacing(_Player))
             {
-                Q.Cast(Q.GetPrediction(target).CastPosition);
+                Q.Cast(target.ServerPosition);               
             }
-            if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            else if (useQ && Q2.IsReady() && Q2.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie && !target.IsFacing(_Player))
             {
-                E.Cast(target);
+                Q2.Cast(target.ServerPosition);
             }
             if (W.IsReady() && useW && target.IsValidTarget(300) && !target.IsDead && !target.IsZombie)
             {
                 W.Cast();
             }
-            if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie)
+            if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
+            {
+                E.Cast(target);
+            }          
+            if (useItem && !target.IsDead && !target.IsZombie)
             {
                 HandleItems();
             }
-            if (R.IsReady() && target.IsValidTarget(600) && !target.IsDead && !target.IsZombie && useR && !useRCustom)
-            {
-                R.Cast();
-            }
-            if (useRCustom && target.Hero == Champion.Ahri || target.Hero == Champion.Alistar || target.Hero == Champion.Amumu || target.Hero == Champion.Anivia || target.Hero == Champion.Annie || target.Hero == Champion.Ashe || target.Hero == Champion.Azir || target.Hero == Champion.Bard || target.Hero == Champion.Brand || target.Hero == Champion.Braum || target.Hero == Champion.Cassiopeia || target.Hero == Champion.Chogath || target.Hero == Champion.Draven || target.Hero == Champion.Ekko || target.Hero == Champion.Elise || target.Hero == Champion.FiddleSticks || target.Hero == Champion.Fizz || target.Hero == Champion.Galio || target.Hero == Champion.Garen || target.Hero == Champion.Gnar || target.Hero == Champion.Gragas || target.Hero == Champion.Hecarim || target.Hero == Champion.Heimerdinger || target.Hero == Champion.Irelia || target.Hero == Champion.Janna || target.Hero == Champion.JarvanIV || target.Hero == Champion.Jax || target.Hero == Champion.Jinx || target.Hero == Champion.Kalista || target.Hero == Champion.Karma || target.Hero == Champion.Kayle || target.Hero == Champion.Kennen || target.Hero == Champion.Leblanc || target.Hero == Champion.LeeSin || target.Hero == Champion.Leona || target.Hero == Champion.Lissandra || target.Hero == Champion.Lulu || target.Hero == Champion.Lux || target.Hero == Champion.Malphite || target.Hero == Champion.Malzahar || target.Hero == Champion.Maokai || target.Hero == Champion.MonkeyKing || target.Hero == Champion.Morgana || target.Hero == Champion.Nami || target.Hero == Champion.Nasus || target.Hero == Champion.Nautilus || target.Hero == Champion.Nocturne || target.Hero == Champion.Nunu || target.Hero == Champion.Orianna || target.Hero == Champion.Pantheon || target.Hero == Champion.Poppy || target.Hero == Champion.Quinn || target.Hero == Champion.Rammus || target.Hero == Champion.RekSai || target.Hero == Champion.Renekton || target.Hero == Champion.Rengar || target.Hero == Champion.Riven || target.Hero == Champion.Ryze || target.Hero == Champion.Sejuani || target.Hero == Champion.Shen || target.Hero == Champion.Singed || target.Hero == Champion.Sion || target.Hero == Champion.Skarner || target.Hero == Champion.Sona || target.Hero == Champion.Swain || target.Hero == Champion.Syndra || target.Hero == Champion.TahmKench || target.Hero == Champion.Taric || target.Hero == Champion.Thresh || target.Hero == Champion.Tristana || target.Hero == Champion.Trundle || target.Hero == Champion.Tryndamere || target.Hero == Champion.TwistedFate || target.Hero == Champion.Udyr || target.Hero == Champion.Varus || target.Hero == Champion.Vayne || target.Hero == Champion.Veigar || target.Hero == Champion.Velkoz || target.Hero == Champion.Vi || target.Hero == Champion.Viktor || target.Hero == Champion.Volibear || target.Hero == Champion.Warwick || target.Hero == Champion.Xerath || target.Hero == Champion.XinZhao || target.Hero == Champion.Yasuo || target.Hero == Champion.Zac || target.Hero == Champion.Ziggs || target.Hero == Champion.Zilean || target.Hero == Champion.Zyra)
+            if (useR && R.IsReady() && target.IsValidTarget(800) && !target.IsDead && !target.IsZombie)
             {
                 R.Cast();
             }
@@ -397,27 +400,28 @@ namespace Perfect_Olaf
         {
             var botrktarget = TargetSelector.GetTarget(550, DamageType.Physical);
             var youmutarget = TargetSelector.GetTarget(800, DamageType.Physical);
+            var target = TargetSelector.GetTarget(600, DamageType.Physical);
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             var useBotrkHP = MiscMenu["botrkHP"].Cast<Slider>().CurrentValue;
             var useBotrkEnemyHP = MiscMenu["botrkenemyHP"].Cast<Slider>().CurrentValue;
             //HYDRA
-            if (useItem && Item.HasItem(3077) && Item.CanUseItem(3077))
+            if (useItem && Item.HasItem(3077) && Item.CanUseItem(3077) && target.IsValidTarget(400))
                 Item.UseItem(3077);
 
             //TİAMAT
-            if (useItem && Item.HasItem(3074) && Item.CanUseItem(3074))
+            if (useItem && Item.HasItem(3074) && Item.CanUseItem(3074) && target.IsValidTarget(400))
                 Item.UseItem(3074);
 
             //NEW ITEM
-            if (useItem && Item.HasItem(3748) && Item.CanUseItem(3748))
+            if (useItem && Item.HasItem(3748) && Item.CanUseItem(3748) && target.IsValidTarget(_Player.AttackRange))
                 Item.UseItem(3748);
 
             //BİLGEWATER CUTLASS
-            if (useItem && Item.HasItem(3144) && Item.CanUseItem(3144) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP)
+            if (useItem && Item.HasItem(3144) && Item.CanUseItem(3144) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP && botrktarget.IsValidTarget(550))
                 Item.UseItem(3144, botrktarget);
 
             //BOTRK
-            if (useItem && Item.HasItem(3153) && Item.CanUseItem(3153) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP)
+            if (useItem && Item.HasItem(3153) && Item.CanUseItem(3153) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP && botrktarget.IsValidTarget(550))
                 Item.UseItem(3153, botrktarget);
 
             //YOUMU
@@ -434,7 +438,7 @@ namespace Perfect_Olaf
 
             if (Q.IsReady() && useQ && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
             {
-                Q.Cast(target);
+                Q.Cast(target.ServerPosition);
             }
             if (W.IsReady() && useW && target.IsValidTarget(_Player.AttackRange) && !target.IsDead && !target.IsZombie)
             {
@@ -457,15 +461,15 @@ namespace Perfect_Olaf
             var minions = ObjectManager.Get<Obj_AI_Base>().OrderBy(m => m.Health).Where(m => m.IsMinion && m.IsEnemy && !m.IsDead);
             foreach (var minion in minions)
             {
-                if (useQ && Q.IsReady() && !minion.IsValidTarget(E.Range) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > Qmana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q))
+                if (useQ && Q.IsReady() && !minion.IsValidTarget(_Player.AttackRange) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > Qmana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q))
                 {
                     Q.Cast(minion);
                 }
-                if (useW && W.IsReady() && Player.Instance.ManaPercent > Wmana && minion.IsValidTarget(_Player.AttackRange) && Player.Instance.HealthPercent < 50)
+                if (useW && W.IsReady() && Player.Instance.ManaPercent > Wmana && minion.IsValidTarget(_Player.AttackRange) && Player.Instance.HealthPercent < 35)
                 {
                     W.Cast();
                 }
-                if (useE && E.IsReady() && Player.Instance.HealthPercent > EHP && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.E))
+                if (useE && E.IsReady() && Player.Instance.HealthPercent > EHP && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.E) && !minion.IsValidTarget(_Player.AttackRange))
                 {
                     E.Cast(minion);
                 }
