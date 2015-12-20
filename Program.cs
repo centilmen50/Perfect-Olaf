@@ -85,6 +85,8 @@ namespace Perfect_Olaf
                 Smite = new Spell.Targeted(smite.Slot, 500);
             }
 
+            
+
 
             Bootstrap.Init(null);
 
@@ -195,8 +197,13 @@ namespace Perfect_Olaf
             DrawMenu.Add("drawE", new CheckBox("Draw E"));
 
             UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.1.6.0");
-            UpdateMenu.AddLabel("-5.24 Updated");
+            UpdateMenu.AddLabel("V0.1.7.0");
+            UpdateMenu.AddLabel("-Q Prediction UPDATE! Please Change Prediction Settings");
+            UpdateMenu.AddLabel("Prediction");
+            UpdateMenu.AddLabel("  Algorithm");
+            UpdateMenu.AddLabel("    Hitchance = 4");
+            UpdateMenu.AddLabel("  Collision");
+            UpdateMenu.AddLabel("    Extra Hitbox Radius = 40");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -342,11 +349,11 @@ namespace Perfect_Olaf
 
             if (useQ && Q.IsReady() && Q.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie && target.IsFacing(_Player))
             {
-                Q.Cast(target.ServerPosition);               
+                Q.Cast(target);               
             }
-            else if (useQ && Q2.IsReady() && Q2.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie && !target.IsFacing(_Player))
+            else if (useQ && Q.IsReady() && Q.GetPrediction(target).HitChance >= HitChance.Medium && !target.IsDead && !target.IsZombie && !target.IsFacing(_Player))
             {
-                Q2.Cast(target.ServerPosition);
+                Q.Cast(target);
             }
             if (W.IsReady() && useW && target.IsValidTarget(300) && !target.IsDead && !target.IsZombie)
             {
@@ -438,7 +445,7 @@ namespace Perfect_Olaf
 
             if (Q.IsReady() && useQ && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
             {
-                Q.Cast(target.ServerPosition);
+                Q.Cast(target);
             }
             if (W.IsReady() && useW && target.IsValidTarget(_Player.AttackRange) && !target.IsDead && !target.IsZombie)
             {

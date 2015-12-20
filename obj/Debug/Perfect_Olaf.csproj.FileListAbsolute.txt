@@ -20,3 +20,6 @@ C:\Users\Mertss\Desktop\My Addons\Perfect Olaf\obj\Debug\Reverse_Olaf.pdb
 C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Olaf\bin\Debug\Reverse_Olaf.exe.config
 C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Olaf\obj\Debug\Reverse_Olaf.exe
 C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Olaf\obj\Debug\Reverse_Olaf.pdb
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\Perfect Olaf\bin\Debug\Reverse_Olaf.exe.config
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\Perfect Olaf\obj\Debug\Reverse_Olaf.exe
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\Perfect Olaf\obj\Debug\Reverse_Olaf.pdb
