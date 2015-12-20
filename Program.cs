@@ -468,7 +468,7 @@ namespace Perfect_Olaf
             var minions = ObjectManager.Get<Obj_AI_Base>().OrderBy(m => m.Health).Where(m => m.IsMinion && m.IsEnemy && !m.IsDead);
             foreach (var minion in minions)
             {
-                if (useQ && Q.IsReady() && !minion.IsValidTarget(_Player.AttackRange) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > Qmana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q))
+                if (useQ && Q.IsReady() && !minion.IsValidTarget(_Player.AttackRange) && minion.IsValidTarget(Q.Range) && Player.Instance.ManaPercent > Qmana && minion.Health <= _Player.GetSpellDamage(minion, SpellSlot.Q) && minions.Count() > 1)
                 {
                     Q.Cast(minion);
                 }
