@@ -109,9 +109,6 @@ namespace Perfect_Olaf
             R = new Spell.Active(SpellSlot.R);
 
             Menu = MainMenu.AddMenu("Perfect Olaf", "perfectolaf");
-            Menu.AddLabel("Perrrrrrrrrfect Ass");
-            Menu.AddSeparator();
-
             
             ComboMenu = Menu.AddSubMenu("Combo Settings","ComboSettings");            
             ComboMenu.AddLabel("Combo Settings");
